@@ -1,0 +1,87 @@
+#!/bin/bash
+
+PACMAN_APT_LIST_SHORT_FORM_ARGS=":euoq"
+PACMAN_APT_LIST_LONG_FORM_ARGS=":explicit,upgradable,orphans,quiet"
+
+pacman() {
+
+    case $1 in
+    install)
+        command pacman -S ${@:2}
+        ;;
+    remove)
+
+        command pacman -R ${@:2}
+        
+        if [[ $? == 0 ]]; then            
+            printf "There are orphaned packages after removing ${@:2}:"
+            printf "\n"
+            #spooky scary eval
+            eval pacman list --orphans
+        fi
+
+        ;;
+
+    purge)
+        command pacman -Rns ${@:2}
+        ;;
+    update)
+        command pacman -Syy
+        ;;
+    upgrade)
+        command pacman -Syu ${@:2}
+        ;;
+    list)
+
+        local i=1 pacman_args=() args=$(getopt -o $PACMAN_APT_LIST_SHORT_FORM_ARGS --long $PACMAN_APT_LIST_LONG_FORM_ARGS -- ${@:2})
+
+        pacman_args[0]="-Q"
+
+        for arg in $args; do
+
+            case $arg in
+            explicit | --explicit | -e)
+                pacman_args[$i]="-e"
+                ;;
+            upgradable | --upgradable | -u)
+                pacman_args[$i]="-u"
+                ;;
+            orphans | --orphans | -o)
+                pacman_args[$i]="-dt"
+                ;;
+            quiet | --quiet | -q)
+                pacman_args[$i]="-q"
+                ;;
+            --) ;;
+            *)
+                printf "Unrecognized option: $arg"
+                return 1
+                ;;
+            esac
+
+            ((++i))
+
+        done
+
+        command pacman ${pacman_args[@]}
+        ;;
+
+    search)
+        command pacman -Ss ${@:2}
+        ;;
+    autoremove)
+
+        if [[$2 == "--purge"]]; then
+            command pacman -Rns $(pacman -Qdtq)
+        else
+            command pacman -Rs $(pacman -Qdtq)
+        fi
+
+        ;;
+
+    *)
+        command pacman $@
+        ;;
+    esac
+
+}
