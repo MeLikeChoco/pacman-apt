@@ -1,0 +1,87 @@
+#!/bin/bash
+
+PARU_APT_LIST_SHORT_FORM_ARGS=":euoq"
+PARU_APT_LIST_LONG_FORM_ARGS=":explicit,upgradable,orphans,quiet"
+
+paru() {
+
+    case $1 in
+    install)
+        command paru -S ${@:2}
+        ;;
+    remove)
+
+        command paru -R ${@:2}
+        
+        if [[ $? == 0 ]]; then            
+            printf "There are orphaned packages after removing ${@:2}:"
+            printf "\n"
+            #spooky scary eval
+            eval paru list --orphans
+        fi
+
+        ;;
+
+    purge)
+        command paru -Rns ${@:2}
+        ;;
+    update)
+        command paru -Syy
+        ;;
+    upgrade)
+        command paru -Syu ${@:2}
+        ;;
+    list)
+
+        local i=1 paru_args=() args=$(getopt -o $PARU_APT_LIST_SHORT_FORM_ARGS --long $PARU_APT_LIST_LONG_FORM_ARGS -- ${@:2})
+
+        paru_args[0]="-Q"
+
+        for arg in $args; do
+
+            case $arg in
+            explicit | --explicit | -e)
+                paru_args[$i]="-e"
+                ;;
+            upgradable | --upgradable | -u)
+                paru_args[$i]="-u"
+                ;;
+            orphans | --orphans | -o)
+                paru_args[$i]="-dt"
+                ;;
+            quiet | --quiet | -q)
+                paru_args[$i]="-q"
+                ;;
+            --) ;;
+            *)
+                printf "Unrecognized option: $arg"
+                return 1
+                ;;
+            esac
+
+            ((++i))
+
+        done
+
+        command paru ${paru_args[@]}
+        ;;
+
+    search)
+        command paru -Ss ${@:2}
+        ;;
+    autoremove)
+
+        if [[$2 == "--purge"]]; then
+            command paru -Rns $(paru -Qdtq)
+        else
+            command paru -Rs $(paru -Qdtq)
+        fi
+
+        ;;
+
+    *)
+        command paru $@
+        ;;
+    esac
+
+}
